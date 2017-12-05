@@ -13,7 +13,7 @@
 1. Set-up the project folder
 
 - Create a folder named replicate
- 
+
   `$ mkdir replicate`
 
 - Change the current directory to replicate
@@ -32,13 +32,14 @@
 
 - Run the following commands in separate terminal windows to initialize each servers
 
-  `$ mongod --replSet replicate --dbpath mongo1 --port 27017 --rest
+  `$ mongod --replSet replicate --dbpath mongo1 --port 27017 --rest`
 
-  $ mongod --replSet replicate --dbpath mongo2 --port 27018 --rest
+  `$ mongod --replSet replicate --dbpath mongo2 --port 27018 --rest`
 
-  $ mongod --replSet replicate --dbpath mongo3 --port 27019 --rest`
+  `$ mongod --replSet replicate --dbpath mongo3 --port 27019 --rest`
 
 3. Login to a mongo instance
+
   `$ mongo localhost:27017`
 
 4. Create a config file within the mongo instance
@@ -46,25 +47,45 @@
 - Create the config variable
 
 ` var config = {
+
     "_id": "replicate",
+
     "version" : 1,
+
     "members" :   [
+
       {
+
         "_id" : 0,
+
         "host" : "localhost:27017",
+
         "priority" : 1
+
       },
+
       {
+
         "_id" : 1,
+
         "host" : "localhost:27018",
+
         "priority" : 0
+
       },
+
       {
+
         "_id" : 2,
+
         "host" : "localhost:27019",
+
         "priority" : 0
+
       }
+
     ]
+
   }
 `
 
@@ -108,3 +129,79 @@
 - Check if the data is consistent between both mongo instances
 
 `> db.<collection_name>.find().pretty()`
+
+## Executing the MapReduce Functions
+
+1. MapReduce function for the prices
+
+```
+mapP = function() {
+  emit({
+    symbol: this.symbol
+  },{
+    count: 1,
+    stock: 'Date: ' + this.date + '; Close: ' + this.close
+  });
+}
+
+reduceP = function(key, values) {
+  var total = 0;
+  var stock = [];
+  for(var i = 0; i < values.length; i++) {
+    total += values[i].count;
+    stock[i] = values[i].stock;
+  }
+  return {count: total, stock: stock};
+}
+```
+
+2. MapReduce function for the companylist
+
+```
+mapCompanies = function() {
+  emit({
+    subsectors: this.Sector
+  },{
+    count: 1,
+    symbol: this.Symbol
+  });
+}
+
+reduceCompanies = function(key,values) {
+  var total = 0;
+  var symbols = [];
+  for(i = 0; i < values.length; i++) {
+    symbols[i] = values[i].symbol;
+    total += values[i].count;
+  }
+  return {count: total, symbol: symbols};
+}
+```
+
+## Running the MapReduce Functions
+
+1. To run the mapReduce function for the prices:
+
+```
+resultsPrice = db.runCommand({
+  mapReduce: 'prices',
+  map: mapP,
+  reduce: reduceP,
+  out: 'prices.reduced'
+});
+
+db.prices.reduced.find().pretty()
+```
+
+2. To run the mapReduce function for the companylist:
+
+```
+resultsCompanies = db.runCommand({
+  mapReduce:'companylist',
+  map: mapCompanies,
+  reduce: reduceCompanies,
+  out: 'companylist.reduced'
+});
+
+db.companylist.reduced.find().pretty()
+```
