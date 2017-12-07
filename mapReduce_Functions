@@ -2,8 +2,8 @@ mapP = function() {
   emit({
     symbol: this.symbol
   },{
-    count: 1,
-    stock: 'Date: ' + this.date + '; Close: ' + this.close
+    date: this.date,
+    open: this
   });
 }
 
@@ -48,4 +48,36 @@ resultsCompanies = db.runCommand({
   map: mapCompanies,
   reduce: reduceCompanies,
   out: 'companylist.reduced'
+});
+
+map = function() {
+  emit({
+    subsector: this.sector
+  },{
+    symbol: this.symbol,
+    date: this.date,
+    open: this.open,
+    close: this.close,
+    low: this.low,
+    high: this.high,
+    volume: this.volume,
+    count: 1
+  })
+}
+
+reduce = function(key, values) {
+  for(v in values) {
+    return v.group({
+    	initial: {average_open:0, count: 0},
+    	reduce: function(symbol,output) {output.average_open++ / output.count++},
+    	key: {'symbol': true}
+    })
+  }
+};
+
+resultsCompanies = db.runCommand({
+  mapReduce:'final',
+  map: map,
+  reduce: reduce,
+  out: 'final.reduced'
 });

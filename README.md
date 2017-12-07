@@ -46,48 +46,29 @@
 
 - Create the config variable
 
-` var config = {
-
-    "_id": "replicate",
-
-    "version" : 1,
-
-    "members" :   [
-
-      {
-
-        "_id" : 0,
-
-        "host" : "localhost:27017",
-
-        "priority" : 1
-
-      },
-
-      {
-
-        "_id" : 1,
-
-        "host" : "localhost:27018",
-
-        "priority" : 0
-
-      },
-
-      {
-
-        "_id" : 2,
-
-        "host" : "localhost:27019",
-
-        "priority" : 0
-
-      }
-
-    ]
-
-  }
-`
+```javascript
+var config = {
+  "_id": "replicate",
+  "version" : 1,
+  "members" :   [
+    {
+      "_id" : 0,
+      "host" : "localhost:27017",
+      "priority" : 1
+    },
+    {
+      "_id" : 1,
+      "host" : "localhost:27018",
+      "priority" : 0
+    },
+    {
+      "_id" : 2,
+      "host" : "localhost:27019",
+      "priority" : 0
+    }
+  ]
+}
+```
 
 - Initialize the replica set using the config variable
 
@@ -205,3 +186,67 @@ resultsCompanies = db.runCommand({
 
 db.companylist.reduced.find().pretty()
 ```
+
+## Sharding the Dataset
+
+1. Enter the project folder
+
+2. Once in the project folder create the necessary directories for sharding
+
+- These directories are the config, the nodes, and the mongos directory
+
+`mkdir config`
+
+`mkdir node1`
+
+`mkdir node2`
+
+`mkdir mongos`
+
+3. After creating the necessary directories we need to setup the servers for each
+
+- To set up the config server:
+
+`mongod --configsvr --replSet finals --dbpath config --port 27017`
+
+- To set up the shards:
+
+`mongod --shardsvr --dbpath node1 --port 27018`
+
+`mongod --shardsvr --dbpath node2 --port 27019`
+
+4. Then setup the sharding configuration within the config server
+
+- First connect to the config server
+
+`mongo localhost:27017`
+
+- then initiate the replicate set configuration
+
+`rs.initiate()`
+
+5. Then set up the mongos server and add the shards
+
+- set up the mongos server:
+
+`mongos --configdb finals/localhost:27017 --port 27020`
+
+- then connect to the mongos server:
+
+`mongo localhost:27020`
+
+- reduce the default chunkSize:
+
+`use config`
+
+`db.settings.save( { _id:"chunksize", value: 1 } )`
+
+- add the shards:
+
+`sh.addShard("localhost:27018")`
+
+`sh.addShard("localhost:27019")`
+
+6. Lastly import the data into the mongos server
+
+`mongoimport --db finals --collection prices --type csv --headerline --file prices.csv --host localhost:27020`
