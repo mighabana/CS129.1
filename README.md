@@ -1,5 +1,7 @@
 # CS 129.1 Final Project
 
+Repository for the final project for CS 129.1 Contemporary Databases. For our final project we were tasked to handle a large dataset, and organize the data through a series of MapReduce functions. Additionally we were tasked with replicating and sharding the data into multiple mongo databases.
+
 ## Loading the Dataset
 
 - The first dataset that we will be using can be downloaded from Kaggle (https://www.kaggle.com/dgawlik/nyse)
